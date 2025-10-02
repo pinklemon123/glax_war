@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Glax War - 4X 策略游戏</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #0a0e27 0%, #1a1a3e 100%);
+            color: #ffffff;
+            overflow: hidden;
+        }
+
+        #game-container {
+            display: flex;
+            height: 100vh;
+        }
+
+        #left-panel {
+            width: 250px;
+            background: rgba(20, 20, 40, 0.9);
+            padding: 20px;
+            overflow-y: auto;
+            border-right: 2px solid #4a4a6a;
+        }
+
+        #canvas-container {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #galaxy-canvas {
+            display: block;
+            background: #000;
+            cursor: grab;
+        }
+
+        #galaxy-canvas:active {
+            cursor: grabbing;
+        }
+
+        #right-panel {
+            width: 300px;
+            background: rgba(20, 20, 40, 0.9);
+            padding: 20px;
+            overflow-y: auto;
+            border-left: 2px solid #4a4a6a;
+        }
+
+        .panel-section {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: rgba(40, 40, 60, 0.6);
+            border-radius: 8px;
+            border: 1px solid #5a5a7a;
+        }
+
+        .panel-section h2 {
+            font-size: 18px;
+            margin-bottom: 10px;
+            color: #00d4ff;
+            border-bottom: 1px solid #4a4a6a;
+            padding-bottom: 5px;
+        }
+
+        .panel-section h3 {
+            font-size: 14px;
+            margin-top: 10px;
+            margin-bottom: 5px;
+            color: #88ccff;
+        }
+
+        .resource-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+            font-size: 14px;
+        }
+
+        .resource-label {
+            color: #aaaacc;
+        }
+
+        .resource-value {
+            color: #00ff88;
+            font-weight: bold;
+        }
+
+        button {
+            width: 100%;
+            padding: 10px;
+            margin: 5px 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.5);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            background: #555;
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+
+        .planet-list {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .planet-item {
+            padding: 8px;
+            margin: 5px 0;
+            background: rgba(60, 60, 80, 0.5);
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 12px;
+        }
+
+        .planet-item:hover {
+            background: rgba(80, 80, 100, 0.7);
+            transform: translateX(5px);
+        }
+
+        .event-log {
+            max-height: 300px;
+            overflow-y: auto;
+            font-size: 12px;
+        }
+
+        .event-item {
+            padding: 8px;
+            margin: 5px 0;
+            background: rgba(60, 60, 80, 0.3);
+            border-radius: 4px;
+            border-left: 3px solid #00d4ff;
+        }
+
+        .event-time {
+            color: #888;
+            font-size: 10px;
+        }
+
+        .turn-info {
+            text-align: center;
+            padding: 15px;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        .turn-number {
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 24px;
+            color: #00d4ff;
+        }
+
+        .tooltip {
+            position: absolute;
+            background: rgba(20, 20, 40, 0.95);
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #00d4ff;
+            pointer-events: none;
+            z-index: 1000;
+            display: none;
+            font-size: 12px;
+        }
+
+        .command-form {
+            margin-top: 10px;
+        }
+
+        .command-form input,
+        .command-form select {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            background: rgba(60, 60, 80, 0.5);
+            border: 1px solid #5a5a7a;
+            border-radius: 4px;
+            color: white;
+            font-size: 12px;
+        }
+
+        .command-form label {
+            display: block;
+            margin-top: 8px;
+            font-size: 12px;
+            color: #aaaacc;
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(40, 40, 60, 0.3);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(102, 126, 234, 0.5);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(102, 126, 234, 0.8);
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <!-- Left Panel: Game Controls -->
+        <div id="left-panel">
+            <div class="turn-info">
+                <div>回合</div>
+                <div class="turn-number" id="turn-number">0</div>
+            </div>
+
+            <div class="panel-section">
+                <h2>游戏控制</h2>
+                <button id="new-game-btn">新游戏</button>
+                <button id="end-turn-btn" disabled>结束回合</button>
+            </div>
+
+            <div class="panel-section">
+                <h2>资源</h2>
+                <div id="resources-display">
+                    <div class="resource-item">
+                        <span class="resource-label">能量:</span>
+                        <span class="resource-value" id="resource-energy">0</span>
+                    </div>
+                    <div class="resource-item">
+                        <span class="resource-label">矿物:</span>
+                        <span class="resource-value" id="resource-minerals">0</span>
+                    </div>
+                    <div class="resource-item">
+                        <span class="resource-label">科研:</span>
+                        <span class="resource-value" id="resource-research">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <h2>我的星球</h2>
+                <div id="my-planets" class="planet-list"></div>
+            </div>
+        </div>
+
+        <!-- Center: Galaxy Map -->
+        <div id="canvas-container">
+            <canvas id="galaxy-canvas"></canvas>
+            <div id="tooltip" class="tooltip"></div>
+        </div>
+
+        <!-- Right Panel: Details and Events -->
+        <div id="right-panel">
+            <div class="panel-section">
+                <h2>星球详情</h2>
+                <div id="planet-details">点击星球查看详情</div>
+            </div>
+
+            <div class="panel-section">
+                <h2>指令面板</h2>
+                <div id="command-panel">
+                    <div class="command-form">
+                        <label>指令类型:</label>
+                        <select id="command-type">
+                            <option value="">选择指令</option>
+                            <option value="colonize">殖民</option>
+                            <option value="build">建造</option>
+                            <option value="research">研究</option>
+                        </select>
+                        <div id="command-params"></div>
+                        <button id="submit-command-btn" disabled>提交指令</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <h2>事件日志</h2>
+                <div id="event-log" class="event-log"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="loading" class="loading" style="display: none;">加载中...</div>
+
+    <script src="game.js"></script>
+</body>
+</html>
