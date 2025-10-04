@@ -1,0 +1,16 @@
+services:
+  glax_war:
+    build: .
+    ports:
+      - "5000:5000"
+    environment:
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - LLM_AI_ENABLED=${LLM_AI_ENABLED}
+      - LLM_PROVIDER=${LLM_PROVIDER}
+      - LLM_MODEL=${LLM_MODEL}
+      - OPENAI_MODEL=${OPENAI_MODEL}
+      - DEEPSEEK_MODEL=${DEEPSEEK_MODEL}
+    volumes:
+      - ./:/app:cached
+    restart: unless-stopped

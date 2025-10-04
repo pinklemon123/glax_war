@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>宇宙编年史 · 对话创作</title>
+  <style>
+    body { margin:0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', 'Microsoft YaHei', sans-serif; color:#eee; background: linear-gradient(135deg,#0a0e27,#1a1a3e); }
+    header { padding: 14px 16px; background: rgba(20,20,40,.95); border-bottom:1px solid #333; position:sticky; top:0; z-index:10; display:flex; align-items:center; gap:10px; }
+    header .brand { color:#00d4ff; font-weight:700; font-size:16px; }
+    header .tools { margin-left:auto; display:flex; gap:8px; align-items:center; }
+    select, button { background: linear-gradient(135deg,#667eea,#764ba2); color:#fff; border:none; border-radius:6px; padding:6px 10px; font-weight:600; cursor:pointer; }
+    button:disabled { opacity:.6; cursor:not-allowed; }
+    main { max-width: 980px; margin: 0 auto; padding: 16px; }
+    .card { background: rgba(40,40,60,0.6); border:1px solid #5a5a7a; border-radius:8px; padding:12px; margin-bottom:12px; }
+    #chat { height: 60vh; overflow-y: auto; padding: 10px; background: rgba(20,20,40,.5); border-radius:8px; border:1px solid #333; }
+    .msg { margin:10px 0; display:flex; gap:10px; }
+    .msg.user { justify-content:flex-end; }
+    .bubble { max-width:70%; padding:10px 12px; border-radius:10px; white-space: pre-wrap; line-height:1.6; }
+    .user .bubble { background: rgba(102,126,234,.25); border:1px solid rgba(102,126,234,.6); }
+    .ai .bubble { background: rgba(60,60,80,.6); border:1px solid #5a5a7a; }
+    .input-row { display:flex; gap:8px; margin-top:8px; }
+    .input-row textarea { flex:1; min-height:60px; max-height:160px; background: rgba(20,20,40,.6); color:#fff; border:1px solid #5a5a7a; border-radius:8px; padding:8px; }
+    .hint { color:#bbb; font-size:12px; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">宇宙编年史 · 对话创作</div>
+    <div class="tools">
+      <label>风格
+        <select id="style">
+          <option value="epic" selected>史诗叙事</option>
+          <option value="documentary">纪实口吻</option>
+          <option value="news">新闻播报</option>
+        </select>
+      </label>
+      <label>提供商
+        <select id="provider">
+          <option value="">自动</option>
+          <option value="openai">OpenAI</option>
+          <option value="deepseek">Deepseek</option>
+        </select>
+      </label>
+      <button id="back">返回</button>
+    </div>
+  </header>
+  <main>
+    <div class="card hint">提示：对话将自动携带本局“编年史”作为上下文。若 LLM 未启用或调用失败，将使用规则式内容进行回答。</div>
+    <div id="chat" class="card"></div>
+    <div class="card">
+      <div class="input-row">
+        <textarea id="input" placeholder="例如：请用第三人称重写战争的三大转折，并补充一段结语。"></textarea>
+        <button id="send">发送</button>
+      </div>
+      <div class="hint" style="margin-top:6px;">建议先发一个目标指令，比如“请写一段新闻播报式的战后电台稿”。</div>
+    </div>
+  </main>
+  <script>
+    const chat = document.getElementById('chat');
+    const input = document.getElementById('input');
+    const sendBtn = document.getElementById('send');
+    const backBtn = document.getElementById('back');
+    const styleSel = document.getElementById('style');
+    const providerSel = document.getElementById('provider');
+
+    const history = [];
+
+    function addMsg(role, content){
+      const wrap = document.createElement('div');
+      wrap.className = 'msg ' + (role === 'user' ? 'user' : 'ai');
+      const b = document.createElement('div');
+      b.className = 'bubble';
+      b.textContent = content;
+      wrap.appendChild(b);
+      chat.appendChild(wrap);
+      chat.scrollTop = chat.scrollHeight;
+    }
+
+    async function send(){
+      const text = (input.value || '').trim();
+      if (!text) return;
+      addMsg('user', text);
+      history.push({ role:'user', content: text });
+      input.value = '';
+      sendBtn.disabled = true;
+      try {
+        const body = { user_text: text, history, style: styleSel.value };
+        if (providerSel.value) body.provider = providerSel.value;
+        const resp = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        const data = await resp.json();
+        const reply = data.reply || ('生成失败：' + (data.message || '未知错误'));
+        addMsg('assistant', reply);
+        history.push({ role:'assistant', content: reply });
+      } catch (e) {
+        const msg = '请求失败：' + e.message;
+        addMsg('assistant', msg);
+        history.push({ role:'assistant', content: msg });
+      } finally {
+        sendBtn.disabled = false;
+      }
+    }
+
+    sendBtn.addEventListener('click', send);
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { send(); }
+    });
+    backBtn.addEventListener('click', () => { window.location.href = '/'; });
+
+    // 首次载入，放置问候与简述提示
+    addMsg('assistant', '你好，我已加载本局编年史。你可以让我用不同风格改写、总结战况、生成人物侧写或撰写战后评论。');
+  </script>
+</body>
+</html>

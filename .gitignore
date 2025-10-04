@@ -42,3 +42,6 @@ game_data/saves/
 # Node
 node_modules/
 npm-debug.log
+
+# Env
+.env

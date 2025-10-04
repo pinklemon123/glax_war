@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>宇宙编年史 · 战后叙事</title>
+  <style>
+    body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', 'Microsoft YaHei', sans-serif; color: #eee; background: linear-gradient(135deg,#0a0e27,#1a1a3e); }
+    header { padding: 16px 20px; background: rgba(20,20,40,0.9); border-bottom: 1px solid #333; position: sticky; top: 0; z-index: 10; }
+    header h1 { margin: 0; font-size: 18px; color: #00d4ff; }
+    header .tools { margin-top: 8px; display: flex; gap: 8px; flex-wrap: wrap; }
+    button, select { background: linear-gradient(135deg,#667eea,#764ba2); color: #fff; border: none; border-radius: 6px; padding: 8px 12px; cursor: pointer; font-weight: 600; }
+    button:disabled { opacity: .6; cursor: not-allowed; }
+    main { max-width: 920px; margin: 0 auto; padding: 20px; }
+    .card { background: rgba(40,40,60,0.6); border: 1px solid #5a5a7a; border-radius: 8px; padding: 16px; margin: 16px 0; }
+    .hint { color: #ccc; font-size: 12px; }
+    #story { white-space: pre-wrap; line-height: 1.8; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>宇宙编年史 · 战后叙事</h1>
+    <div class="tools">
+      <label>
+        写作风格：
+        <select id="style">
+          <option value="epic" selected>史诗叙事</option>
+          <option value="documentary">纪实口吻</option>
+          <option value="news">新闻播报</option>
+        </select>
+      </label>
+      <label>
+        提供商（可选覆盖）：
+        <select id="provider">
+          <option value="">自动</option>
+          <option value="openai">OpenAI</option>
+          <option value="deepseek">Deepseek</option>
+        </select>
+      </label>
+      <button id="gen">生成故事</button>
+      <button id="goto-chat">对话创作</button>
+      <button id="back">返回游戏</button>
+    </div>
+  </header>
+  <main>
+    <div class="card">
+      <div class="hint">说明：本页可调用已配置的 LLM（若启用）根据“本局编年史+最终实力”自动撰写战后故事；若未启用或无密钥，则会生成空白文本。</div>
+    </div>
+    <div class="card" id="loading" style="display:none;">生成中，请稍候……</div>
+    <div class="card">
+      <div id="story">（点击“生成故事”开始）</div>
+    </div>
+  </main>
+  <script>
+    const genBtn = document.getElementById('gen');
+    const backBtn = document.getElementById('back');
+    const styleSel = document.getElementById('style');
+    const providerSel = document.getElementById('provider');
+    const storyEl = document.getElementById('story');
+    const loading = document.getElementById('loading');
+
+    backBtn.addEventListener('click', () => {
+      location.href = '/';
+    });
+
+    genBtn.addEventListener('click', async () => {
+      storyEl.textContent = '';
+      loading.style.display = 'block';
+      genBtn.disabled = true;
+      try {
+        const body = { style: styleSel.value };
+        if (providerSel.value) body.provider = providerSel.value;
+        const resp = await fetch('/api/game/story', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        const data = await resp.json();
+        if (!data.success) {
+          storyEl.textContent = '生成失败：' + (data.message || '未知错误');
+        } else if (!data.story) {
+          const hint = data.message ? `（${data.message}）` : '（LLM 未启用或未配置密钥，未生成内容）';
+          storyEl.textContent = hint;
+        } else {
+          storyEl.textContent = data.story;
+        }
+      } catch (e) {
+        storyEl.textContent = '请求失败：' + e.message;
+      } finally {
+        loading.style.display = 'none';
+        genBtn.disabled = false;
+      }
+    });
+
+    const chatBtn = document.getElementById('goto-chat');
+    chatBtn.addEventListener('click', () => { location.href = '/chat'; });
+  </script>
+</body>
+</html>
